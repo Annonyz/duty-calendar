@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>民警值班排班日历 · 实时更新</title>
+<style>
+  :root{
+    --gold:#c9a227;
+    --gold-deep:#a8841a;
+    /* 值班：醒目橙红 */
+    --duty-bg:#ffd9c2;
+    --duty-bg2:#ffb383;
+    --duty-border:#e8802f;
+    --duty-text:#8a3b00;
+    /* 副班：清爽蓝白 */
+    --sub-bg:#eef5ff;
+    --sub-bg2:#d8e9ff;
+    --sub-border:#9dc2ee;
+    --sub-text:#1b4f8f;
+    /* 休息：绿色 */
+    --rest-bg:#d8f2df;
+    --rest-bg2:#a9e3bd;
+    --rest-border:#4fae74;
+    --rest-text:#0f6132;
+    /* 过去：灰色（普通 / 值班深灰） */
+    --past-bg:#eceef2;
+    --past-border:#d5d9e0;
+    --past-text:#98a0ad;
+    --past-duty-bg:#c9cdd6;
+    --past-duty-bg2:#b8bdc8;
+    --past-duty-border:#9aa1ae;
+    --past-duty-text:#4a5160;
+    --today-ring:#e2452f;
+    --ink:#1f2836;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC","Hiragino Sans GB",sans-serif;
+    background:
+      radial-gradient(circle at 12% 6%, #fdf3d8 0%, transparent 42%),
+      radial-gradient(circle at 88% 94%, #f6e7c8 0%, transparent 42%),
+      #f4efe3;
+    color:var(--ink);
+    min-height:100vh;
+    padding:16px 14px 34px;
+    display:flex;
+    justify-content:center;
+  }
+  .wrap{width:100%;max-width:820px;}
+
+  /* ============ 顶部横幅 ============ */
+  .bless{
+    position:relative;
+    background:linear-gradient(150deg,#2b1708 0%,#4a2a0c 45%,#2b1708 100%);
+    border:2px solid var(--gold);
+    border-radius:20px;
+    padding:20px 18px 16px;
+    text-align:center;
+    overflow:hidden;
+    box-shadow:0 8px 26px rgba(60,40,10,.28);
+    margin-bottom:12px;
+  }
+  .bless::before{
+    content:"";position:absolute;inset:5px;border:1px solid rgba(201,162,39,.45);
+    border-radius:15px;pointer-events:none;
+  }
+  .bless .corner{position:absolute;width:26px;height:26px;border:2px solid var(--gold);opacity:.85;}
+  .bless .c1{top:12px;left:12px;border-right:0;border-bottom:0;border-radius:8px 0 0 0;}
+  .bless .c2{top:12px;right:12px;border-left:0;border-bottom:0;border-radius:0 8px 0 0;}
+  .bless .c3{bottom:12px;left:12px;border-right:0;border-top:0;border-radius:0 0 0 8px;}
+  .bless .c4{bottom:12px;right:12px;border-left:0;border-top:0;border-radius:0 0 8px 0;}
+  .motto{
+    font-family:"STKaiti","KaiTi","Kaiti SC","Noto Serif CJK SC",serif;
+    font-weight:700;
+    font-size:clamp(40px,12vw,64px);
+    letter-spacing:.16em;
+    text-indent:.16em;
+    line-height:1.22;
+    background:linear-gradient(180deg,#fff8dc 0%,#ffe9a3 38%,#d9ab21 72%,#fff3c4 100%);
+    -webkit-background-clip:text;background-clip:text;
+    color:transparent;
+    -webkit-text-stroke:.6px rgba(255,242,200,.35);
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+  }
+  .livebar{
+    margin-top:9px;display:flex;align-items:center;justify-content:center;gap:9px;
+    font-size:12.5px;color:#f0dca4;letter-spacing:.06em;flex-wrap:wrap;
+  }
+  .livebar .dotlive{
+    width:7px;height:7px;border-radius:50%;background:#5ce08a;
+    box-shadow:0 0 0 0 rgba(92,224,138,.7);animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(92,224,138,.7);}
+    70%{box-shadow:0 0 0 8px rgba(92,224,138,0);}
+    100%{box-shadow:0 0 0 0 rgba(92,224,138,0);}
+  }
+  .livebar b{color:#fff3c4;font-weight:700;font-variant-numeric:tabular-nums;}
+  .seal{
+    position:absolute;right:16px;bottom:12px;width:50px;height:50px;border:2px solid #d8452f;
+    border-radius:8px;color:#ff6a52;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;font-family:"STKaiti","KaiTi",serif;font-weight:700;font-size:16px;
+    line-height:1.05;letter-spacing:1px;opacity:.92;transform:rotate(-6deg);
+  }
+  .seal span{font-size:9px;letter-spacing:1px;opacity:.9;}
+
+  /* ============ 控制栏 ============ */
+  .panel{
+    background:#fff;border-radius:16px;border:1px solid #e6e0d0;
+    box-shadow:0 4px 16px rgba(80,60,20,.09);padding:12px 14px 14px;
+  }
+  .ctrl{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .nav{
+    width:42px;height:42px;border-radius:12px;border:1px solid #e2d9c3;background:#fffdf7;
+    cursor:pointer;font-size:19px;color:#7a6520;display:flex;align-items:center;justify-content:center;
+    transition:.18s;flex:0 0 auto;
+  }
+  .nav:hover{background:#fdf3d2;border-color:var(--gold);}
+  .nav:active{transform:scale(.94);}
+  .title-box{text-align:center;flex:1;min-width:0;}
+  .title-box h1{
+    font-size:22px;font-weight:800;letter-spacing:.02em;color:#2a1f0c;
+    font-family:"Noto Serif CJK SC","Songti SC",serif;
+  }
+  .title-box h1 em{color:var(--gold-deep);font-style:normal;font-size:26px;}
+  .title-box p{font-size:12px;color:#8b8676;margin-top:3px;letter-spacing:.05em;}
+
+  /* ============ 班组切换 ============ */
+  .grouptabs{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;
+  }
+  .gtab{
+    border:1px solid #e2d9c3;background:#fffdf7;border-radius:11px;padding:9px 6px;
+    cursor:pointer;text-align:center;transition:.18s;font-size:13px;font-weight:700;color:#7a6520;
+    line-height:1.4;
+  }
+  .gtab .sub{display:block;font-size:10.5px;font-weight:600;color:#a9a291;margin-top:2px;letter-spacing:.04em;}
+  .gtab:hover{background:#fdf3d2;border-color:var(--gold);}
+  .gtab.on{
+    background:linear-gradient(150deg,#4a2a0c,#2b1708);border-color:var(--gold);color:#ffe9a3;
+    box-shadow:0 3px 10px rgba(80,50,10,.28);
+  }
+  .gtab.on .sub{color:#d8c48a;}
+
+  /* ============ 今日班型高亮卡 ============ */
+  .groupname{
+    margin-top:12px;text-align:center;font-size:19px;font-weight:800;color:#2a1f0c;
+    font-family:"Noto Serif CJK SC","Songti SC",serif;letter-spacing:.04em;
+  }
+  .groupname em{color:var(--gold-deep);font-style:normal;}
+  .groupname .gtag{
+    display:inline-block;margin-left:7px;font-size:11px;font-weight:700;color:#8a6a00;
+    background:#fdf3d2;border:1px solid #e8d7a0;border-radius:7px;padding:1px 7px;
+    vertical-align:middle;letter-spacing:.02em;
+  }
+  .nowcard{
+    margin-top:12px;display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:14px;
+    border:1px solid #e6e0d0;background:#fffdf7;
+  }
+  .nowcard .badge{
+    width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;letter-spacing:.04em;flex:0 0 auto;text-align:center;line-height:1.15;
+    border:1px solid;
+  }
+  .nowcard .badge.duty{background:linear-gradient(160deg,var(--duty-bg2),var(--duty-bg));border-color:var(--duty-border);color:var(--duty-text);}
+  .nowcard .badge.rest{background:linear-gradient(160deg,var(--rest-bg2),var(--rest-bg));border-color:var(--rest-border);color:var(--rest-text);}
+  .nowcard .badge.sub{background:linear-gradient(160deg,var(--sub-bg2),var(--sub-bg));border-color:var(--sub-border);color:var(--sub-text);}
+  .nowcard .info{flex:1;min-width:0;}
+  .nowcard .info .d1{font-size:15px;font-weight:800;color:#2a1f0c;}
+  .nowcard .info .d2{font-size:12px;color:#8b8676;margin-top:4px;line-height:1.6;}
+  .nowcard .clock{
+    font-variant-numeric:tabular-nums;font-weight:800;font-size:20px;color:#a8841a;
+    font-family:"DIN Alternate","Bahnschrift",sans-serif;text-align:right;flex:0 0 auto;
+  }
+  .nowcard .clock small{display:block;font-size:10.5px;color:#a9a291;font-weight:600;margin-top:2px;letter-spacing:.06em;}
+
+  /* ============ 日历 ============ */
+  .cal{margin-top:14px;}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .week div{
+    text-align:center;font-size:12.5px;font-weight:700;color:#8a7f63;padding:6px 0;letter-spacing:.06em;
+  }
+  .week div.we{color:#c0784a;}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+
+  .cell{
+    position:relative;border-radius:11px;min-height:76px;
+    padding:7px 6px 6px;display:flex;flex-direction:column;cursor:default;
+    border:1px solid var(--sub-border);background:#fff;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .cell:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(80,60,20,.13);z-index:2;}
+  .cell.empty{background:transparent;border:1px dashed #e8e4d8;box-shadow:none;}
+  .cell.empty:hover{transform:none;box-shadow:none;}
+  .cell .dnum{
+    font-size:18px;font-weight:800;line-height:1;color:#2c3446;
+    font-family:"DIN Alternate","Bahnschrift","Noto Sans CJK SC",sans-serif;
+  }
+  .cell .sol{font-size:10px;color:#a9a291;font-weight:600;margin-left:3px;}
+  .cell .top{display:flex;align-items:baseline;}
+  .cell .tag{
+    margin-top:auto;font-size:13px;font-weight:800;letter-spacing:.04em;
+    display:flex;align-items:center;gap:4px;
+  }
+  .cell .tag .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto;}
+  .cell .fest{
+    position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;
+    background:#fde8e4;color:#c0392b;border:1px solid #f3c8c0;
+    border-radius:6px;padding:1px 5px;line-height:1.5;white-space:nowrap;
+  }
+  .cell .restnote{font-size:9.5px;color:#2b8a53;font-weight:700;margin-top:1px;}
+
+  /* 值班（醒目橙红） */
+  .cell.duty{background:linear-gradient(160deg,var(--duty-bg2),var(--duty-bg));border-color:var(--duty-border);box-shadow:inset 0 0 0 1px rgba(255,255,255,.55);}
+  .cell.duty .tag{color:var(--duty-text);}
+  .cell.duty .dnum{color:#8a3b00;}
+  .cell.duty .sol{color:#c07a45;}
+  /* 副班（清爽蓝） */
+  .cell.sub{background:linear-gradient(160deg,var(--sub-bg2),var(--sub-bg));border-color:var(--sub-border);}
+  .cell.sub .tag{color:var(--sub-text);}
+  .cell.sub .dnum{color:#1b4f8f;}
+  /* 休息（绿色） */
+  .cell.rest{background:linear-gradient(160deg,var(--rest-bg2),var(--rest-bg));border-color:var(--rest-border);}
+  .cell.rest .tag{color:var(--rest-text);}
+  .cell.rest .dnum{color:#0f6132;}
+  /* 过去（灰色） */
+  .cell.past{background:var(--past-bg)!important;border-color:var(--past-border)!important;box-shadow:none;}
+  .cell.past .tag,.cell.past .dnum,.cell.past .sol{color:var(--past-text);}
+  .cell.past .fest{background:#e6e8ec;color:#9aa2ae;border-color:#dfe2e7;}
+  .cell.past .restnote{display:none;}
+  /* 过去·值班（更深一档灰，便于回顾） */
+  .cell.past-duty{
+    background:linear-gradient(160deg,var(--past-duty-bg2),var(--past-duty-bg))!important;
+    border-color:var(--past-duty-border)!important;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);
+  }
+  .cell.past-duty .tag,.cell.past-duty .dnum,.cell.past-duty .sol{color:var(--past-duty-text);}
+  .cell.past-duty .tag .dot{background:var(--past-duty-text);}
+  .cell.past-duty .fest{background:#d3d7de;color:#6f7887;border-color:#c6cbd4;}
+  /* 今天 */
+  .cell.today{border:2px solid var(--today-ring)!important;box-shadow:0 0 0 3px rgba(226,69,47,.13);}
+  .cell.today::after{
+    content:"今天";position:absolute;top:-1px;left:-1px;background:var(--today-ring);color:#fff;
+    font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px 0 8px 0;letter-spacing:.06em;
+  }
+
+  .legend{
+    margin-top:14px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;
+    padding:11px 13px;background:#fffdf7;border:1px solid #eee5cd;border-radius:12px;
+    font-size:12px;color:#6f6858;
+  }
+  .legend i{width:15px;height:15px;border-radius:5px;display:block;border:1px solid;flex:0 0 auto;}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .lg-duty{background:linear-gradient(160deg,var(--duty-bg2),var(--duty-bg));border-color:var(--duty-border);}
+  .lg-sub{background:linear-gradient(160deg,var(--sub-bg2),var(--sub-bg));border-color:var(--sub-border);}
+  .lg-rest{background:linear-gradient(160deg,var(--rest-bg2),var(--rest-bg));border-color:var(--rest-border);}
+  .lg-past{background:var(--past-bg);border-color:var(--past-border);}
+  .lg-past-duty{background:linear-gradient(160deg,var(--past-duty-bg2),var(--past-duty-bg));border-color:var(--past-duty-border);}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  .stat{background:#fff;border:1px solid #eee5cd;border-radius:12px;padding:10px 8px;text-align:center;}
+  .stat b{display:block;font-size:19px;font-weight:800;color:#2a1f0c;}
+  .stat small{font-size:11px;color:#938c7b;display:block;margin-top:2px;}
+  .stat.d b{color:#c25a12;} .stat.r b{color:#0f6132;} .stat.s b{color:#1b4f8f;}
+
+  .foot{margin-top:16px;font-size:11.5px;color:#9a9384;line-height:1.9;text-align:center;}
+  .foot b{color:#7a6520;}
+
+  @media(max-width:560px){
+    body{padding:12px 8px 28px;}
+    .cell{min-height:66px;padding:6px 5px;border-radius:9px;}
+    .cell .dnum{font-size:15.5px;}
+    .cell .tag{font-size:11px;}
+    .cell .fest{font-size:9px;padding:0 4px;top:5px;right:5px;}
+    .cell .sol{display:none;}
+    .grid,.week{gap:4px;}
+    .title-box h1{font-size:19px;} .title-box h1 em{font-size:22px;}
+    .nowcard .badge{width:52px;height:52px;font-size:13px;}
+    .nowcard .clock{font-size:17px;}
+    .groupname{font-size:17px;}
+    .gtab{font-size:11.5px;padding:8px 4px;}
+    .gtab .sub{font-size:9.5px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶部：「今日无警」 -->
+  <div class="bless">
+    <span class="corner c1"></span><span class="corner c2"></span>
+    <span class="corner c3"></span><span class="corner c4"></span>
+    <div class="motto">今日无警</div>
+    <div class="livebar">
+      <span class="dotlive"></span>
+      <span>实时排班 · <b id="liveClock">--:--:--</b> · 自动跟随日期更新</span>
+    </div>
+    <div class="seal">平安<span>POLICE</span></div>
+  </div>
+
+  <!-- 面板 -->
+  <div class="panel">
+    <div class="ctrl">
+      <button class="nav" id="prev" title="上一个月">‹</button>
+      <div class="title-box">
+        <h1><em id="y">2026</em> 年 <em id="m">9</em> 月</h1>
+        <p id="rangenote">整月值班表 · 3 天一轮（值班 · 副班 · 副班）</p>
+      </div>
+      <button class="nav" id="next" title="下一个月">›</button>
+    </div>
+
+    <!-- 班组切换 -->
+    <div class="grouptabs" id="groupTabs"></div>
+
+    <!-- 今日状态卡（实时刷新） -->
+    <div class="groupname" id="groupNameBig">王顶坤组<span class="gtag">一组</span></div>
+    <div class="nowcard">
+      <div class="badge sub" id="nowBadge">—</div>
+      <div class="info">
+        <div class="d1" id="nowTitle">正在读取…</div>
+        <div class="d2" id="nowDesc">—</div>
+      </div>
+      <div class="clock" id="nowClock">--:--<small>当前时间</small></div>
+    </div>
+
+    <div class="cal">
+      <div class="week">
+        <div>周一</div><div>周二</div><div>周三</div><div>周四</div><div>周五</div>
+        <div class="we">周六</div><div class="we">周日</div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </div>
+
+    <div class="legend">
+      <span><i class="lg-duty"></i>值班</span>
+      <span><i class="lg-sub"></i>副班 / 备勤</span>
+      <span><i class="lg-rest"></i>休息（节假日或周末）</span>
+      <span><i class="lg-past-duty"></i>已过·值班</span>
+      <span><i class="lg-past"></i>已过·副班</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat d"><b id="sDuty">0</b><small>本月值班天数</small></div>
+      <div class="stat r"><b id="sRest">0</b><small>本月休息天数</small></div>
+      <div class="stat s"><b id="sSub">0</b><small>本月备勤天数</small></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div><b>排班规则：</b>以 2026-09-11 为基准日，王顶坤组当天值班，此后每 3 天循环：值班 → 副班 → 副班；三组轮转。</div>
+    <div><b>休息规则：</b>副班当天若为法定节假日或非调休的周六、周日，则改为休息；调休上班的周末按工作日处理，副班不休息。</div>
+    <div><b>实时更新：</b>页面每分钟自动校准当前时间与「今天」标记，跨零点自动切换；节假日依据国务院办公厅《关于 2026 年部分节假日安排的通知》。</div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== 2026 节假日数据（国务院办公厅 2025-11-04 通知） ===================== */
+const HOLIDAY = {
+  "01-01":"元旦","01-02":"元旦","01-03":"元旦",
+  "02-15":"春节","02-16":"春节","02-17":"春节","02-18":"春节","02-19":"春节",
+  "02-20":"春节","02-21":"春节","02-22":"春节","02-23":"春节",
+  "04-04":"清明","04-05":"清明","04-06":"清明",
+  "05-01":"劳动节","05-02":"劳动节","05-03":"劳动节","05-04":"劳动节","05-05":"劳动节",
+  "06-19":"端午","06-20":"端午","06-21":"端午",
+  "09-25":"中秋","09-26":"中秋","09-27":"中秋",
+  "10-01":"国庆","10-02":"国庆","10-03":"国庆","10-04":"国庆",
+  "10-05":"国庆","10-06":"国庆","10-07":"国庆"
+};
+const MAKEUP = {
+  "01-04":"元旦调休上班","02-14":"春节调休上班","02-28":"春节调休上班",
+  "05-09":"劳动节调休上班","09-20":"国庆调休上班","10-10":"国庆调休上班"
+};
+
+const BASE = new Date(2026, 8, 11);          // 基准日：2026-09-11 王顶坤组值班
+const WEEK_CN = ["周日","周一","周二","周三","周四","周五","周六"];
+
+/* 三个值班组：王顶坤组 / 申恩旺组 / 孙杰组 */
+const groups = [
+  {name:"王顶坤组", offset:0, tag:"一组"},
+  {name:"申恩旺组", offset:1, tag:"二组"},
+  {name:"孙杰组",   offset:2, tag:"三组"}
+];
+let gi = 0;
+/* 打开页面时自动定位到当前月份 */
+const _now = new Date();
+let curY = _now.getFullYear(), curM = _now.getMonth();
+
+const pad = n => String(n).padStart(2,"0");
+const key = d => pad(d.getMonth()+1) + "-" + pad(d.getDate());
+const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function today(){ const t = new Date(); return dayStart(t); }
+
+/* 0 值班 / 1 副班 / 2 副班 */
+function baseType(date){
+  const diff = Math.round((dayStart(date) - BASE) / 86400000);
+  return ((diff + groups[gi].offset) % 3 + 3) % 3;
+}
+const isHoliday  = d => !!HOLIDAY[key(d)];
+const holidayName= d => HOLIDAY[key(d)] || "";
+const isMakeup   = d => !!MAKEUP[key(d)];
+function isRealWeekend(d){
+  const w = d.getDay();
+  return (w === 0 || w === 6) && !isMakeup(d);
+}
+function isRest(d){
+  const t = baseType(d);
+  if (t === 0) return false;                  // 值班永不休息
+  return isHoliday(d) || isRealWeekend(d);
+}
+function liveLabel(d){
+  const t = baseType(d);
+  if (t === 0) return "值班";
+  return isRest(d) ? "休息" : "副班";
+}
+function rawLabel(d){ return baseType(d) === 0 ? "值班" : "副班"; }
+
+/* ===================== 班组切换按钮 ===================== */
+function renderTabs(){
+  const box = document.getElementById("groupTabs");
+  box.innerHTML = "";
+  groups.forEach((g, i) => {
+    const b = document.createElement("div");
+    b.className = "gtab" + (i === gi ? " on" : "");
+    b.innerHTML = g.name + '<span class="sub">' + g.tag + " · " +
+      (baseType(today()) === 0 ? "今日值班" : (isRest(today()) ? "今日休息" : "今日副班")) + "</span>";
+    b.onclick = () => { gi = i; render(); updateNow(); };
+    box.appendChild(b);
+  });
+}
+
+/* ===================== 渲染日历（仅当月日期） ===================== */
+function render(){
+  const TODAY = today();
+  const first = new Date(curY, curM, 1);
+  const firstW = (first.getDay() + 6) % 7;    // 周一 = 0
+  const daysInMonth = new Date(curY, curM + 1, 0).getDate();
+  const rows = Math.ceil((firstW + daysInMonth) / 7);
+
+  document.getElementById("y").textContent = curY;
+  document.getElementById("m").textContent = curM + 1;
+
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  let sDuty = 0, sRest = 0, sSub = 0;
+
+  for (let i = 0; i < rows * 7; i++){
+    const dayNum = i - firstW + 1;
+    const cell = document.createElement("div");
+
+    // 当月之外的格子：留空，不显示日期
+    if (dayNum < 1 || dayNum > daysInMonth){
+      cell.className = "cell empty";
+      grid.appendChild(cell);
+      continue;
+    }
+
+    const d = new Date(curY, curM, dayNum);
+    const t = baseType(d);
+    const rest = isRest(d);
+    const past = d < TODAY;
+    const today_ = d.getTime() === TODAY.getTime();
+
+    let cls = "cell";
+    if (past) cls += (t === 0 ? " past past-duty" : " past");
+    else if (t === 0) cls += " duty";
+    else if (rest) cls += " rest";
+    else cls += " sub";
+    if (today_) cls += " today";
+
+    const tagText = past ? rawLabel(d) : liveLabel(d);
+
+    if (!past){
+      if (t === 0) sDuty++;
+      else if (rest) sRest++;
+      else sSub++;
+    }
+
+    const hn = holidayName(d);
+    cell.className = cls;
+    cell.innerHTML =
+      '<div class="top"><span class="dnum">' + d.getDate() + '</span>' +
+        '<span class="sol">' + WEEK_CN[d.getDay()] + '</span></div>' +
+      (hn ? '<div class="fest">' + hn + '</div>' : "") +
+      '<div class="tag"><span class="dot"></span>' + tagText + '</div>' +
+      ((!past && t !== 0 && rest && hn) ? '<div class="restnote">节日休息</div>' : "");
+
+    let tip = d.getFullYear() + "年" + (d.getMonth()+1) + "月" + d.getDate() + "日 " + WEEK_CN[d.getDay()];
+    tip += " · " + groups[gi].name + " · " + (t === 0 ? "值班" : "副班");
+    if (hn) tip += " · " + hn + "假期";
+    if (isMakeup(d)) tip += " · " + MAKEUP[key(d)];
+    if (!past && rest) tip += " → 今日休息";
+    cell.title = tip;
+
+    grid.appendChild(cell);
+  }
+
+  document.getElementById("sDuty").textContent = sDuty;
+  document.getElementById("sRest").textContent = sRest;
+  document.getElementById("sSub").textContent  = sSub;
+
+  const T = today();
+  document.getElementById("rangenote").textContent =
+    groups[gi].name + " · 今日：" +
+    (baseType(T) === 0 ? "值班" : (isRest(T) ? "副班 → 休息" : "副班（备勤）"));
+
+  renderTabs();
+}
+
+/* ===================== 今日状态卡（实时） ===================== */
+function updateNow(){
+  const T = today();
+  const t = baseType(T);
+  const rest = isRest(T);
+  const hn = holidayName(T);
+
+  const badge = document.getElementById("nowBadge");
+  badge.className = "badge " + (t === 0 ? "duty" : (rest ? "rest" : "sub"));
+  badge.textContent = t === 0 ? "值班" : (rest ? "休息" : "副班");
+
+  const d1 = document.getElementById("nowTitle");
+  const d2 = document.getElementById("nowDesc");
+  d1.textContent = T.getFullYear() + " 年 " + (T.getMonth()+1) + " 月 " + T.getDate() + " 日 · " + WEEK_CN[T.getDay()];
+  document.getElementById("groupNameBig").innerHTML =
+    groups[gi].name + '<span class="gtag">' + groups[gi].tag + "</span>";
+
+  let desc = "今日班型：" + (t === 0 ? "值班" : "副班（备勤）");
+  if (t !== 0 && rest){
+    desc += " → 因" + (isHoliday(T) ? ("「" + hn + "」法定节假日") : (isMakeup(T) ? "调休上班" : "周末")) + "改为休息";
+  }
+  if (isMakeup(T)) desc += " · " + MAKEUP[key(T)];
+  if (hn) desc += " · " + hn + "假期";
+  d2.textContent = desc;
+
+  const now = new Date();
+  document.getElementById("nowClock").innerHTML =
+    pad(now.getHours()) + ":" + pad(now.getMinutes()) + "<small>当前时间</small>";
+  document.getElementById("liveClock").textContent =
+    pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+}
+
+/* ===================== 交互 ===================== */
+document.getElementById("prev").onclick = () => { curM--; if (curM < 0){curM=11;curY--;} render(); };
+document.getElementById("next").onclick = () => { curM++; if (curM > 11){curM=0;curY++;} render(); };
+
+let lastDay = today().getTime();
+function tick(){
+  const T = today();
+  if (T.getTime() !== lastDay){ lastDay = T.getTime(); render(); }
+  updateNow();
+}
+setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+
+render();
+updateNow();
+</script>
+</body>
+</html>
