@@ -392,11 +392,12 @@ const key = d => pad(d.getMonth()+1) + "-" + pad(d.getDate());
 const dayStart = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 function today(){ const t = new Date(); return dayStart(t); }
 
-/* 0 值班 / 1 副班 / 2 副班 */
-function baseType(date){
+/* 0 值班 / 1 副班 / 2 副班（offset 指定班组；缺省用当前选中班组） */
+function baseTypeOf(date, offset){
   const diff = Math.round((dayStart(date) - BASE) / 86400000);
-  return ((diff + groups[gi].offset) % 3 + 3) % 3;
+  return ((diff + offset) % 3 + 3) % 3;
 }
+function baseType(date){ return baseTypeOf(date, groups[gi].offset); }
 const isHoliday  = d => !!HOLIDAY[key(d)];
 const holidayName= d => HOLIDAY[key(d)] || "";
 const isMakeup   = d => !!MAKEUP[key(d)];
@@ -404,11 +405,12 @@ function isRealWeekend(d){
   const w = d.getDay();
   return (w === 0 || w === 6) && !isMakeup(d);
 }
-function isRest(d){
-  const t = baseType(d);
+function isRestOf(d, offset){
+  const t = baseTypeOf(d, offset);
   if (t === 0) return false;                  // 值班永不休息
   return isHoliday(d) || isRealWeekend(d);
 }
+function isRest(d){ return isRestOf(d, groups[gi].offset); }
 function liveLabel(d){
   const t = baseType(d);
   if (t === 0) return "值班";
@@ -423,8 +425,10 @@ function renderTabs(){
   groups.forEach((g, i) => {
     const b = document.createElement("div");
     b.className = "gtab" + (i === gi ? " on" : "");
+    const T = today();
+    const gt = baseTypeOf(T, g.offset);        // 按该班组自己的偏移计算，避免全显示成同一状态
     b.innerHTML = g.name + '<span class="sub">' + g.tag + " · " +
-      (baseType(today()) === 0 ? "今日值班" : (isRest(today()) ? "今日休息" : "今日副班")) + "</span>";
+      (gt === 0 ? "今日值班" : (isRestOf(T, g.offset) ? "今日休息" : "今日副班")) + "</span>";
     b.onclick = () => { gi = i; render(); updateNow(); };
     box.appendChild(b);
   });
