@@ -471,11 +471,10 @@ function render(){
 
     const tagText = past ? rawLabel(d) : liveLabel(d);
 
-    if (!past){
-      if (t === 0) sDuty++;
-      else if (rest) sRest++;
-      else sSub++;
-    }
+    /* 统计本月整月的天数（含已过去的日期） */
+    if (t === 0) sDuty++;
+    else if (rest) sRest++;
+    else sSub++;
 
     const hn = holidayName(d);
     cell.className = cls;
